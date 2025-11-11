@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>監視器誤差時間轉換器</title>
+<title>監視器誤差轉換工具</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#0b0d10">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,6 +17,7 @@
     --accent:#1f6feb;
     --danger:#b3261e;
     --panel:#11151a;
+    --green:#22c55e;
     --edge:#1b2026;
   }
   *{box-sizing:border-box}
@@ -31,14 +32,14 @@
     -moz-osx-font-smoothing:grayscale;
   }
   .wrap{max-width:960px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:16px}
-  .card{
+  .card{position:relative;
     background:var(--panel);
     border:1px solid var(--edge);
     border-radius:16px;
     padding:16px;
     box-shadow:0 6px 24px rgba(0,0,0,.25);
   }
-  h1{margin:0 0 8px 0;font-size:24px;letter-spacing:.5px}
+  h1{margin:0 0 8px 0;font-size:24px;letter-spacing:.5px;text-align:center;color:var(--green);}
   .clock{
     font-size:28px;line-height:1.2;letter-spacing:1px;
     display:flex;justify-content:space-between;align-items:center;gap:12px;
@@ -79,28 +80,31 @@
     font-size:28px;letter-spacing:1px;
     color:#fff;display:flex;flex-direction:column;gap:6px;
   }
-  .hint{font-size:12px;color:#fdd;opacity:.85}
+  .hint{font-size:inherit;color:#fff;opacity:1}
   .pill{
     border:1px solid var(--edge);background:#0f141a;border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted)
   }
   .danger{color:#ffd7d4}
+
+  .pill.corner{position:absolute; top:16px; right:16px;}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="card">
-    <h1>監視器誤差時間轉換器</h1>
+    <h1>監視器誤差轉換工具</h1>
     <div class="clock" id="liveClock">
       <div>
-        <div id="liveRoc" aria-live="polite">民國114年01月01日 00:00:00</div>
+        <div id="liveRoc" aria-live="polite">114年01月01日 00:00:00</div>
         <div class="sub">目前時間</div>
       </div>
-      <div class="pill" id="offsetInfo">誤差：-- 分</div>
+      
     </div>
   </div>
 
   <div class="card">
     <div class="group-title">① 監視器顯示時間</div>
+    <div class="pill corner" id="offsetInfo">誤差：-- 分</div>
     <div class="grid">
       <div class="toggle">
         <button id="modeRoc" class="btn" aria-pressed="true">民國</button>
@@ -168,10 +172,7 @@ function getNowPartsTaipei(){
   return {y,M,d,h,m,s};
 }
 
-function fmtROC(obj){
-  const y=obj.y,M=obj.M,d=obj.d,h=obj.h,m=obj.m,s = (obj.s||0);
-  return '民國'+toROC(y)+'年'+pad2(M)+'月'+pad2(d)+'日 '+pad2(h)+':'+pad2(m)+':'+pad2(s);
-}
+function fmtROC(obj){ const y=obj.y,M=obj.M,d=obj.d,h=obj.h,m=obj.m,s=(obj.s||0); return toROC(y)+'年'+pad2(M)+'月'+pad2(d)+'日 '+pad2(h)+':'+pad2(m)+':'+pad2(s); }
 function fmtAD(obj){
   const y=obj.y,M=obj.M,d=obj.d,h=obj.h,m=obj.m,s = (obj.s||0);
   return y+'-'+pad2(M)+'-'+pad2(d)+' '+pad2(h)+':'+pad2(m)+':'+pad2(s);
@@ -310,10 +311,10 @@ function compute(){
   // Display in camera mode format
   if (camMode==='ROC'){
     outMain.textContent = fmtROC(outParts);
-    outAlt.textContent = '西元：' + fmtAD(outParts);
+    outAlt.textContent = fmtAD(outParts);
   }else{
     outMain.textContent = fmtAD(outParts);
-    outAlt.textContent = '民國：' + fmtROC(outParts);
+    outAlt.textContent = fmtROC(outParts);
   }
 }
 
