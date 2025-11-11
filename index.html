@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>監視器誤差轉換工具</title>
+<title>監視器誤差時間轉換器</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#0b0d10">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,7 +17,6 @@
     --accent:#1f6feb;
     --danger:#b3261e;
     --panel:#11151a;
-    --green:#22c55e;
     --edge:#1b2026;
   }
   *{box-sizing:border-box}
@@ -32,14 +31,14 @@
     -moz-osx-font-smoothing:grayscale;
   }
   .wrap{max-width:960px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:16px}
-  .card{position:relative;
+  .card{
     background:var(--panel);
     border:1px solid var(--edge);
     border-radius:16px;
     padding:16px;
     box-shadow:0 6px 24px rgba(0,0,0,.25);
   }
-  h1{margin:0 0 8px 0;font-size:24px;letter-spacing:.5px;text-align:center;color:var(--green);}
+  h1{margin:0 0 8px 0;font-size:24px;letter-spacing:.5px}
   .clock{
     font-size:28px;line-height:1.2;letter-spacing:1px;
     display:flex;justify-content:space-between;align-items:center;gap:12px;
@@ -85,26 +84,23 @@
     border:1px solid var(--edge);background:#0f141a;border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted)
   }
   .danger{color:#ffd7d4}
-
-  .pill.corner{position:absolute; top:16px; right:16px;}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="card">
-    <h1>監視器誤差轉換工具</h1>
+    <h1>監視器誤差時間轉換器</h1>
     <div class="clock" id="liveClock">
       <div>
         <div id="liveRoc" aria-live="polite">民國114年01月01日 00:00:00</div>
         <div class="sub">目前時間</div>
       </div>
-      
+      <div class="pill" id="offsetInfo">誤差：-- 分</div>
     </div>
   </div>
 
   <div class="card">
     <div class="group-title">① 監視器顯示時間</div>
-    <div class="pill corner" id="offsetInfo">誤差：-- 分</div>
     <div class="grid">
       <div class="toggle">
         <button id="modeRoc" class="btn" aria-pressed="true">民國</button>
