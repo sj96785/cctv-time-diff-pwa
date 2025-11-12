@@ -1,5 +1,5 @@
 {
-  "name": "監視器誤差時間轉換器",
+  "name": "監視器誤差轉換工具",
   "short_name": "誤差轉換",
   "start_url": "./index.html",
   "display": "standalone",

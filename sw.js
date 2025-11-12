@@ -1,8 +1,6 @@
-// v3 - network-first for HTML to ensure updates; cache-first for static assets
-const CACHE_VERSION = 'v3-2025-11-11';
+// v6-2025-11-12 - network-first HTML + cache busting
+const CACHE_VERSION = 'v6-2025-11-12';
 const CACHE_NAME = 'cctv-diff-cache-' + CACHE_VERSION;
-
-// Add a version query to assets to bust old cached entries
 const VQ = '?v=' + CACHE_VERSION;
 const ASSETS = [
   './index.html' + VQ,
@@ -20,50 +18,30 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then(keys => Promise.all(
-      keys.map(k => (k === CACHE_NAME ? null : caches.delete(k)))
-    )).then(() => self.clients.claim())
+    caches.keys().then(keys => Promise.all(keys.map(k => (k === CACHE_NAME ? null : caches.delete(k)))))
+      .then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
+  if (req.method !== 'GET' || url.origin !== location.origin) return;
 
-  // Only handle GET and same-origin
-  if (req.method !== 'GET' || url.origin !== location.origin) {
-    return;
-  }
-
-  // 1) For navigations/HTML: network-first to get latest, fallback to cache
+  // HTML: network-first
   if (req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html')) {
     event.respondWith(
       fetch(req).then(res => {
-        const copy = res.clone();
-        // Put a versioned key for index.html
-        const key = './index.html' + VQ;
-        caches.open(CACHE_NAME).then(c => c.put(key, copy));
+        caches.open(CACHE_NAME).then(c => c.put('./index.html' + VQ, res.clone()));
         return res;
-      }).catch(() => {
-        // Fallback to versioned cached index
-        return caches.match('./index.html' + VQ);
-      })
+      }).catch(() => caches.match('./index.html' + VQ))
     );
     return;
   }
 
-  // 2) For other same-origin GET requests: cache-first, then network
+  // Other same-origin assets: cache-first
   event.respondWith(
-    caches.match(req).then(cached => {
-      if (cached) return cached;
-      return fetch(req).then(networkRes => {
-        const resCopy = networkRes.clone();
-        caches.open(CACHE_NAME).then(c => c.put(req, resCopy));
-        return networkRes;
-      });
-    }).catch(() => {
-      // Final fallback: try versioned index
-      return caches.match('./index.html' + VQ);
-    })
+    caches.match(req).then(cached => cached || fetch(req).then(r => { caches.open(CACHE_NAME).then(c => c.put(req, r.clone())); return r; }))
+      .catch(() => caches.match('./index.html' + VQ))
   );
 });
