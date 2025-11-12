@@ -1,5 +1,6 @@
-// v6-2025-11-12 - network-first HTML + cache busting
-const CACHE_VERSION = 'v6-2025-11-12';
+
+// v8-2025-11-12 - network-first HTML + cache busting
+const CACHE_VERSION = 'v8-2025-11-12';
 const CACHE_NAME = 'cctv-diff-cache-' + CACHE_VERSION;
 const VQ = '?v=' + CACHE_VERSION;
 const ASSETS = [
@@ -18,8 +19,8 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.map(k => (k === CACHE_NAME ? null : caches.delete(k)))))
-      .then(() => self.clients.claim())
+    caches.keys().then(keys => Promise.all(keys.map(k => (k === CACHE_NAME ? null : caches.delete(k)))
+    )).then(() => self.clients.claim())
   );
 });
 
@@ -28,7 +29,6 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== location.origin) return;
 
-  // HTML: network-first
   if (req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html')) {
     event.respondWith(
       fetch(req).then(res => {
@@ -39,7 +39,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Other same-origin assets: cache-first
   event.respondWith(
     caches.match(req).then(cached => cached || fetch(req).then(r => { caches.open(CACHE_NAME).then(c => c.put(req, r.clone())); return r; }))
       .catch(() => caches.match('./index.html' + VQ))

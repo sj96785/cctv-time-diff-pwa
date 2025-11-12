@@ -30,14 +30,7 @@
     font-weight:700;
   }
   .wrap{max-width:960px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:16px}
-  .card{
-    position:relative;
-    background:var(--panel);
-    border:1px solid var(--edge);
-    border-radius:16px;
-    padding:16px;
-    box-shadow:0 6px 24px rgba(0,0,0,.25);
-  }
+  .card{position:relative;background:var(--panel);border:1px solid var(--edge);border-radius:16px;padding:16px;box-shadow:0 6px 24px rgba(0,0,0,.25);}
   h1{margin:0 0 8px 0;font-size:24px;letter-spacing:.5px;text-align:center;color:var(--green);}
   .clock{font-size:28px;line-height:1.2;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center;gap:12px;}
   .sub{font-size:12px;color:var(--muted);}
@@ -57,7 +50,7 @@
   .hint{font-size:inherit;color:#fff;opacity:1}
   .pill{border:1px solid var(--edge);background:#0f141a;border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted)}
   .pill.corner{position:absolute; top:16px; right:16px;}
-  .pill.offset{font-size:16px} /* +4px */
+  .pill.offset{font-size:16px}
   .danger{color:#ffd7d4}
   .btn-group-abs{position:absolute; right:16px; bottom:12px; display:flex; gap:8px}
   .btn.small{padding:8px 10px; font-size:12px; border-radius:10px}
@@ -120,7 +113,7 @@
   </div>
 </div>
 
-<div class="ver-badge" id="verBadge">v6-2025-11-12</div>
+<div class="ver-badge" id="verBadge">v8-2025-11-12</div>
 
 <script>
 const TZ = 'Asia/Taipei';
@@ -129,22 +122,16 @@ const toROC = ad => ad - 1911;
 const fromROC = roc => roc + 1911;
 
 function daysInMonth(yearAD, month){ return new Date(yearAD, month, 0).getDate(); }
-
-function tsFromPartsAD(obj){
-  const {y,M,d,h,m} = obj; const s = obj.s || 0;
-  return Date.UTC(y, M-1, d, h - 8, m, s, 0);
-}
-
+function tsFromPartsAD(obj){ const {y,M,d,h,m} = obj; const s = obj.s || 0; return Date.UTC(y, M-1, d, h - 8, m, s, 0); }
 function getNowPartsTaipei(){
   const dtf = new Intl.DateTimeFormat('en-CA', {timeZone: TZ, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false});
   const parts = Object.fromEntries(dtf.formatToParts(new Date()).map(p=>[p.type,p.value]));
   return {y:+parts.year, M:+parts.month, d:+parts.day, h:+parts.hour, m:+parts.minute, s:+parts.second};
 }
-
 function fmtROC(obj){ const {y,M,d,h,m} = obj; const s=obj.s||0; return toROC(y)+'/'+pad2(M)+'/'+pad2(d)+' '+pad2(h)+':'+pad2(m)+':'+pad2(s); }
 function fmtAD (obj){ const {y,M,d,h,m} = obj; const s=obj.s||0; return y+'/'+pad2(M)+'/'+pad2(d)+' '+pad2(h)+':'+pad2(m)+':'+pad2(s); }
 
-// DOM
+// DOM refs
 const liveRoc = document.getElementById('liveRoc');
 const offsetInfo = document.getElementById('offsetInfo');
 const modeRocBtn = document.getElementById('modeRoc');
@@ -177,23 +164,31 @@ function rangeOptions(sel, start, end){
   }
 }
 
+// Expanded year ranges: now ±100, future +5; ROC clamped to >=1
 function setCamYears(){
   const now = getNowPartsTaipei();
   if (camMode === 'ROC'){
     const rocNow = toROC(now.y);
-    rangeOptions(camYear, rocNow-20, rocNow+1);
+    const start = Math.max(1, rocNow - 100);
+    const end = rocNow + 5;
+    rangeOptions(camYear, start, end);
     camYear.value = rocNow;
   }else{
-    rangeOptions(camYear, now.y-20, now.y+1);
+    const start = now.y - 100;
+    const end = now.y + 5;
+    rangeOptions(camYear, start, end);
     camYear.value = now.y;
   }
 }
 function setWantYears(){
   const now = getNowPartsTaipei();
   const rocNow = toROC(now.y);
-  rangeOptions(wantYear, rocNow-20, rocNow+1);
+  const start = Math.max(1, rocNow - 100);
+  const end = rocNow + 5;
+  rangeOptions(wantYear, start, end);
   wantYear.value = rocNow;
 }
+
 function setMonthsDaysHoursMinutes(prefix, yAD, M){
   const monthSel  = document.getElementById(prefix+'Month');
   const daySel    = document.getElementById(prefix+'Day');
@@ -219,14 +214,7 @@ function syncDayCount(prefix){
 }
 
 function getCamParts(){
-  return {
-    y: camMode==='ROC' ? fromROC(+camYear.value) : +camYear.value,
-    M: +camMonth.value,
-    d: +camDay.value,
-    h: +camHour.value,
-    m: +camMinute.value,
-    s: 0
-  };
+  return { y: camMode==='ROC' ? fromROC(+camYear.value) : +camYear.value, M:+camMonth.value, d:+camDay.value, h:+camHour.value, m:+camMinute.value, s:0 };
 }
 
 function compute(){
@@ -279,22 +267,18 @@ function init(){
   const resetDiffBtn = document.getElementById('resetDiffBtn');
   confirmDiffBtn.addEventListener('click', () => {
     const now = getNowPartsTaipei();
-    const nowTs = tsFromPartsAD(now);
-    const camTs = tsFromPartsAD(getCamParts());
-    fixedDiffMs = nowTs - camTs;
+    fixedDiffMs = tsFromPartsAD(now) - tsFromPartsAD(getCamParts());
     useFixedDiff = true;
     compute();
   });
-  resetDiffBtn.addEventListener('click', () => {
-    useFixedDiff = false; fixedDiffMs = 0; compute();
-  });
+  resetDiffBtn.addEventListener('click', () => { useFixedDiff = false; fixedDiffMs = 0; compute(); });
 
   compute();
   setInterval(compute, 1000);
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js?v=v6-2025-11-12').catch(console.error);
+      navigator.serviceWorker.register('./sw.js?v=v8-2025-11-12').catch(console.error);
     });
   }
 }
