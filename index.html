@@ -1,3 +1,304 @@
-<!doctype html><meta charset='utf-8'><title>PWA</title><link rel='manifest' href='./manifest.webmanifest'><link rel='icon' href='icons/icon-192.png?v=v7-2025-11-12'>
-<link rel="icon" href="icons/icon-192.png?v=v8-1762907551">
-<link rel="apple-touch-icon" href="icons/icon-180.png?v=v8-1762907551"><script>if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js?v=v8-1762907551v7-2025-11-12');}</script>
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>監視器誤差轉換工具</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#0b0d10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+  :root{
+    --bg:#0b0d10;
+    --fg:#f2f5f7;
+    --muted:#8e9aa3;
+    --accent:#1f6feb;
+    --danger:#b3261e;
+    --panel:#11151a;
+    --edge:#1b2026;
+    --green:#22c55e;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--fg);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
+    font-weight:700;
+  }
+  .wrap{max-width:960px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:16px}
+  .card{
+    position:relative;
+    background:var(--panel);
+    border:1px solid var(--edge);
+    border-radius:16px;
+    padding:16px;
+    box-shadow:0 6px 24px rgba(0,0,0,.25);
+  }
+  h1{margin:0 0 8px 0;font-size:24px;letter-spacing:.5px;text-align:center;color:var(--green);}
+  .clock{font-size:28px;line-height:1.2;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center;gap:12px;}
+  .sub{font-size:12px;color:var(--muted);}
+  .grid{display:grid;gap:12px;grid-template-columns: 1fr;}
+  @media (min-width:700px){.grid{grid-template-columns: 220px 1fr;}}
+  .toggle{display:flex;gap:8px;align-items:flex-start;justify-content:flex-start;}
+  .btn{padding:14px 16px;border-radius:12px;border:1px solid var(--edge);background:#0f141a;color:var(--fg);font-weight:800;cursor:pointer;font-size:16px;}
+  .btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent)}
+  .btn:active{transform:translateY(1px)}
+  .group-title{font-size:16px;margin-bottom:10px;color:#cdd6de}
+  .pickers{display:flex;gap:10px;flex-wrap:wrap}
+  .picker{display:flex;flex-direction:column;gap:6px;min-width:80px}
+  .picker label{font-size:12px;color:var(--muted)}
+  select{appearance:none;-webkit-appearance:none;-moz-appearance:none;width:100%;height:44px;border-radius:12px;border:1px solid var(--edge);background:#0f141a;color:var(--fg);padding:0 12px;font-size:18px;font-weight:800;}
+  .foot{background:linear-gradient(180deg,#2a0e0c, #350e0e);border-color:#4e1616;}
+  .out-time{font-size:28px;letter-spacing:1px;color:#fff;display:flex;flex-direction:column;gap:6px;}
+  .hint{font-size:inherit;color:#fff;opacity:1}
+  .pill{border:1px solid var(--edge);background:#0f141a;border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted)}
+  .pill.corner{position:absolute; top:16px; right:16px;}
+  .pill.offset{font-size:16px} /* +4px */
+  .danger{color:#ffd7d4}
+  .btn-group-abs{position:absolute; right:16px; bottom:12px; display:flex; gap:8px}
+  .btn.small{padding:8px 10px; font-size:12px; border-radius:10px}
+  .btn.green{background:#16a34a;border-color:#16a34a}
+  .btn.red{background:#b3261e;border-color:#b3261e}
+  .ver-badge{position:fixed;bottom:10px;right:10px;background:#0f141a;border:1px solid var(--edge);color:#8e9aa3;border-radius:999px;padding:6px 10px;font-size:12px;opacity:.85;z-index:9999}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>監視器誤差轉換工具</h1>
+    <div class="clock" id="liveClock">
+      <div>
+        <div id="liveRoc" aria-live="polite">114/01/01 00:00:00</div>
+        <div class="sub">目前時間</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="group-title">① 監視器顯示時間</div>
+    <div class="pill corner offset" id="offsetInfo">誤差：--</div>
+    <div class="grid">
+      <div class="toggle">
+        <button id="modeRoc" class="btn" aria-pressed="true">民國</button>
+        <button id="modeAd" class="btn" aria-pressed="false">西元</button>
+      </div>
+      <div class="pickers" id="camPickers">
+        <div class="picker"><label>年</label><select id="camYear"></select></div>
+        <div class="picker"><label>月</label><select id="camMonth"></select></div>
+        <div class="picker"><label>日</label><select id="camDay"></select></div>
+        <div class="picker"><label>時</label><select id="camHour"></select></div>
+        <div class="picker"><label>分</label><select id="camMinute"></select></div>
+        <div class="btn-group-abs">
+          <button id="confirmDiffBtn" class="btn small green">確定誤差</button>
+          <button id="resetDiffBtn" class="btn small red">重整</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="group-title">② 所需調閱實際時間（民國）</div>
+    <div class="pickers">
+      <div class="picker"><label>年</label><select id="wantYear"></select></div>
+      <div class="picker"><label>月</label><select id="wantMonth"></select></div>
+      <div class="picker"><label>日</label><select id="wantDay"></select></div>
+      <div class="picker"><label>時</label><select id="wantHour"></select></div>
+      <div class="picker"><label>分</label><select id="wantMinute"></select></div>
+    </div>
+  </div>
+
+  <div class="card foot">
+    <div class="group-title danger">③ 轉換誤差後時間（請在監視器系統上選擇）</div>
+    <div class="out-time">
+      <div id="outMain">--</div>
+      <div class="hint" id="outAlt"></div>
+    </div>
+  </div>
+</div>
+
+<div class="ver-badge" id="verBadge">v6-2025-11-12</div>
+
+<script>
+const TZ = 'Asia/Taipei';
+const pad2 = n => String(n).padStart(2,'0');
+const toROC = ad => ad - 1911;
+const fromROC = roc => roc + 1911;
+
+function daysInMonth(yearAD, month){ return new Date(yearAD, month, 0).getDate(); }
+
+function tsFromPartsAD(obj){
+  const {y,M,d,h,m} = obj; const s = obj.s || 0;
+  return Date.UTC(y, M-1, d, h - 8, m, s, 0);
+}
+
+function getNowPartsTaipei(){
+  const dtf = new Intl.DateTimeFormat('en-CA', {timeZone: TZ, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false});
+  const parts = Object.fromEntries(dtf.formatToParts(new Date()).map(p=>[p.type,p.value]));
+  return {y:+parts.year, M:+parts.month, d:+parts.day, h:+parts.hour, m:+parts.minute, s:+parts.second};
+}
+
+function fmtROC(obj){ const {y,M,d,h,m} = obj; const s=obj.s||0; return toROC(y)+'/'+pad2(M)+'/'+pad2(d)+' '+pad2(h)+':'+pad2(m)+':'+pad2(s); }
+function fmtAD (obj){ const {y,M,d,h,m} = obj; const s=obj.s||0; return y+'/'+pad2(M)+'/'+pad2(d)+' '+pad2(h)+':'+pad2(m)+':'+pad2(s); }
+
+// DOM
+const liveRoc = document.getElementById('liveRoc');
+const offsetInfo = document.getElementById('offsetInfo');
+const modeRocBtn = document.getElementById('modeRoc');
+const modeAdBtn  = document.getElementById('modeAd');
+const camYear   = document.getElementById('camYear');
+const camMonth  = document.getElementById('camMonth');
+const camDay    = document.getElementById('camDay');
+const camHour   = document.getElementById('camHour');
+const camMinute = document.getElementById('camMinute');
+const wantYear   = document.getElementById('wantYear');
+const wantMonth  = document.getElementById('wantMonth');
+const wantDay    = document.getElementById('wantDay');
+const wantHour   = document.getElementById('wantHour');
+const wantMinute = document.getElementById('wantMinute');
+const outMain = document.getElementById('outMain');
+const outAlt  = document.getElementById('outAlt');
+
+let camMode = 'ROC';
+let useFixedDiff = false;
+let fixedDiffMs = 0;
+
+function rangeOptions(sel, start, end){
+  sel.innerHTML = '';
+  const step = start <= end ? 1 : -1;
+  for(let v=start; step>0 ? v<=end : v>=end; v+=step){
+    const opt = document.createElement('option');
+    opt.value = v;
+    opt.textContent = v;
+    sel.appendChild(opt);
+  }
+}
+
+function setCamYears(){
+  const now = getNowPartsTaipei();
+  if (camMode === 'ROC'){
+    const rocNow = toROC(now.y);
+    rangeOptions(camYear, rocNow-20, rocNow+1);
+    camYear.value = rocNow;
+  }else{
+    rangeOptions(camYear, now.y-20, now.y+1);
+    camYear.value = now.y;
+  }
+}
+function setWantYears(){
+  const now = getNowPartsTaipei();
+  const rocNow = toROC(now.y);
+  rangeOptions(wantYear, rocNow-20, rocNow+1);
+  wantYear.value = rocNow;
+}
+function setMonthsDaysHoursMinutes(prefix, yAD, M){
+  const monthSel  = document.getElementById(prefix+'Month');
+  const daySel    = document.getElementById(prefix+'Day');
+  const hourSel   = document.getElementById(prefix+'Hour');
+  const minuteSel = document.getElementById(prefix+'Minute');
+  rangeOptions(monthSel, 1, 12);
+  rangeOptions(hourSel, 0, 23);
+  rangeOptions(minuteSel, 0, 59);
+  const dim = daysInMonth(yAD, M || 1);
+  rangeOptions(daySel, 1, dim);
+}
+function syncDayCount(prefix){
+  const y = prefix === 'cam' ? (camMode==='ROC' ? fromROC(+camYear.value) : +camYear.value) : fromROC(+wantYear.value);
+  const M = +document.getElementById(prefix+'Month').value;
+  const daySel = document.getElementById(prefix+'Day');
+  const current = +daySel.value || 1;
+  const dim = daysInMonth(y, M);
+  if (daySel.options.length !== dim){
+    const keep = Math.min(current, dim);
+    rangeOptions(daySel, 1, dim);
+    daySel.value = keep;
+  }
+}
+
+function getCamParts(){
+  return {
+    y: camMode==='ROC' ? fromROC(+camYear.value) : +camYear.value,
+    M: +camMonth.value,
+    d: +camDay.value,
+    h: +camHour.value,
+    m: +camMinute.value,
+    s: 0
+  };
+}
+
+function compute(){
+  const now = getNowPartsTaipei();
+  liveRoc.textContent = fmtROC(now);
+
+  const camParts = getCamParts();
+  const wantParts = { y: fromROC(+wantYear.value), M:+wantMonth.value, d:+wantDay.value, h:+wantHour.value, m:+wantMinute.value, s:0 };
+
+  const nowTs  = tsFromPartsAD(now);
+  const camTs  = tsFromPartsAD(camParts);
+  const wantTs = tsFromPartsAD(wantParts);
+
+  const diffMs = useFixedDiff ? fixedDiffMs : (nowTs - camTs); // positive => camera 慢
+  const diffMin = Math.round(diffMs / 60000);
+  offsetInfo.textContent = (diffMs===0) ? '誤差：0分' : ('誤差：' + (diffMs<0 ? '快' : '慢') + Math.abs(diffMin) + '分');
+
+  const outTs = wantTs + diffMs;
+  const dtf = new Intl.DateTimeFormat('en-CA', {timeZone: TZ, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false});
+  const x = Object.fromEntries(dtf.formatToParts(new Date(outTs)).map(p=>[p.type,p.value]));
+  const outParts = {y:+x.year, M:+x.month, d:+x.day, h:+x.hour, m:+x.minute, s:+x.second};
+
+  if (camMode==='ROC'){
+    outMain.textContent = fmtROC(outParts);
+    outAlt.textContent  = fmtAD(outParts);
+  }else{
+    outMain.textContent = fmtAD(outParts);
+    outAlt.textContent  = fmtROC(outParts);
+  }
+}
+
+function init(){
+  setCamYears();
+  setWantYears();
+
+  const now = getNowPartsTaipei();
+  setMonthsDaysHoursMinutes('cam', camMode==='ROC'? fromROC(+camYear.value) : +camYear.value, now.M);
+  camMonth.value = now.M; syncDayCount('cam'); camDay.value = now.d; camHour.value = now.h; camMinute.value = now.m;
+
+  setMonthsDaysHoursMinutes('want', now.y, now.M);
+  wantMonth.value = now.M; syncDayCount('want'); wantDay.value = now.d; wantHour.value = now.h; wantMinute.value = now.m;
+
+  modeRocBtn.addEventListener('click', () => { camMode='ROC'; modeRocBtn.setAttribute('aria-pressed','true'); modeAdBtn.setAttribute('aria-pressed','false'); setCamYears(); setMonthsDaysHoursMinutes('cam', fromROC(+camYear.value), +camMonth.value || 1); syncDayCount('cam'); compute(); });
+  modeAdBtn .addEventListener('click', () => { camMode='AD' ; modeRocBtn.setAttribute('aria-pressed','false'); modeAdBtn.setAttribute('aria-pressed','true'); setCamYears(); setMonthsDaysHoursMinutes('cam', +camYear.value, +camMonth.value || 1); syncDayCount('cam'); compute(); });
+
+  [camYear, camMonth, camDay, camHour, camMinute].forEach(el=> el.addEventListener('change', () => { if(el===camYear || el===camMonth) syncDayCount('cam'); compute(); }));
+  [wantYear, wantMonth, wantDay, wantHour, wantMinute].forEach(el=> el.addEventListener('change', () => { if(el===wantYear || el===wantMonth) syncDayCount('want'); compute(); }));
+
+  const confirmDiffBtn = document.getElementById('confirmDiffBtn');
+  const resetDiffBtn = document.getElementById('resetDiffBtn');
+  confirmDiffBtn.addEventListener('click', () => {
+    const now = getNowPartsTaipei();
+    const nowTs = tsFromPartsAD(now);
+    const camTs = tsFromPartsAD(getCamParts());
+    fixedDiffMs = nowTs - camTs;
+    useFixedDiff = true;
+    compute();
+  });
+  resetDiffBtn.addEventListener('click', () => {
+    useFixedDiff = false; fixedDiffMs = 0; compute();
+  });
+
+  compute();
+  setInterval(compute, 1000);
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js?v=v6-2025-11-12').catch(console.error);
+    });
+  }
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
